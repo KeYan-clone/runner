@@ -1,0 +1,12 @@
+﻿{
+    "width": 600,
+    "search_engine": "https://www.google.com/search?q=",
+    "window_transparency": 150,
+    "plugins": {
+        "enabled": true,
+        "load_all": true,
+        "whitelist": [
+            "WindowPinPlugin"
+        ]
+    }
+}

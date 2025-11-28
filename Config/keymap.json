@@ -1,0 +1,7 @@
+{
+  "toggle_launcher": "CapsLock & o",
+  "reload": "^!r",
+  "exit": "CapsLock & q",
+  "window_pin": "CapsLock & p",
+  "window_transparency": "CapsLock & t"
+}
