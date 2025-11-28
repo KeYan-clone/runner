@@ -27,6 +27,18 @@ Init()
 Init() {
     LoadConfigs()
 
+    ; Set Tray Icon
+    if (g_Config["settings"].Has("icon")) {
+        iconPath := g_Config["settings"]["icon"]
+        if !InStr(iconPath, ":") ; Relative path
+            iconPath := A_ScriptDir . "\" . iconPath
+
+        if FileExist(iconPath) {
+            TraySetIcon(iconPath)
+
+        }
+    }
+
     ; Init UI
     global g_SearchWindow := SearchWindow(g_Config)
 
