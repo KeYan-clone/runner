@@ -5,6 +5,7 @@
 #Include ..\Core\Plugin.ahk
 #Include ..\Utils\StringUtils.ahk
 #Include ..\Utils\HttpUtils.ahk
+#Include ..\Utils\MD5Utils.ahk
 
 class TranslatePlugin extends Plugin {
     config := ""
@@ -88,84 +89,129 @@ class TranslatePlugin extends Plugin {
 
         translationConfig := this.config["settings"]["translation"]
 
-        ; Check API URL and key
-        if (!translationConfig.Has("api_url") || !translationConfig.Has("api_key")) {
-            MsgBox("API URL or API Key not specified in settings.json", "Translation Error")
+        ; Check API URL, appid and key
+        if (!translationConfig.Has("api_url") || !translationConfig.Has("appid") || !translationConfig.Has("api_key")) {
+            MsgBox("API URL, appid or api_key not specified in settings.json", "Translation Error")
             return ""
         }
 
         apiUrl := translationConfig["api_url"]
-        apiKey := translationConfig["api_key"]
+        ; 关键修复：去除 appid 和 apiKey 上的潜在空白字符
+        appid := Trim(translationConfig["appid"])
+        apiKey := Trim(translationConfig["api_key"])
 
         ; Make translation request
-        return this.TranslateWithAPI(text, apiUrl, apiKey)
+        return this.TranslateWithAPI(text, apiUrl, appid, apiKey)
     }
 
-    TranslateWithAPI(text, apiUrl, apiKey) {
-        ; Build request URL
-        url := apiUrl . "?text=" . StringUtils.UrlEncode(text) . "&key=" . apiKey
+    TranslateWithAPI(text, apiUrl, appid, apiKey) {
+        ; 百度翻译API参数
+        salt := this.GenerateSalt()
+        from := "auto"
+        to := "zh"
+
+        ; 签名计算：MD5(appid+q+salt+密钥)
+        signStr := appid . text . salt . apiKey
+        sign := this.MD5(signStr)
+
+        ; 构造请求URL（所有参数拼接在URL后面）
+        requestUrl := apiUrl
+            . "?q=" . StringUtils.UrlEncode(text)
+            . "&from=" . from
+            . "&to=" . to
+            . "&appid=" . appid
+            . "&salt=" . salt
+            . "&sign=" . sign
 
         try {
-            response := HttpUtils.Get(url)
+            response := HttpUtils.Get(requestUrl)
+            result := Jxon_load(&response)
 
-            ; Try to parse as JSON
-            try {
-                result := Jxon_Load(&response)
-
-                ; Common response formats
-                if (result.Has("translation")) {
-                    return result["translation"]
-                } else if (result.Has("result")) {
-                    return result["result"]
-                } else if (result.Has("data") && Type(result["data"]) = "String") {
-                    return result["data"]
-                }
+            if (result.Has("error_code")) {
+                if (result.Has("error_msg"))
+                    return "Error " . result["error_code"] . ": " . result["error_msg"]
+                return "Error: " . result["error_code"]
             }
 
-            ; If not JSON, return raw response
-            return response
+            if (result.Has("trans_result") && result["trans_result"] is Array) {
+                ; 只显示译文，多个结果用换行分隔
+                out := ""
+                for item in result["trans_result"] {
+                    if (out != "")
+                        out .= "\n"
+                    out .= item["dst"]
+                }
+                return out
+            }
+            return "No translation result"
         } catch as err {
             return "Request failed: " . err.Message
         }
     }
 
-    CreateTranslationWindow() {
-        ; Create a draggable, semi-transparent window
-        this.translationWindow := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x20", "Translation")
-        this.translationWindow.BackColor := "0x1E1E1E"
+    ; 生成随机salt
+    GenerateSalt() {
+        return Format("{:06d}", Random(100000, 999999))
+    }
 
-        ; Make background semi-transparent (0-255, 0=invisible, 255=opaque)
-        WinSetTransparent(230, this.translationWindow)
+    ; MD5计算 - 使用 MD5Utils 库
+    MD5(str) {
+        ; 移除了阻塞的 MsgBox 调试信息，使用高性能的 MD5Utils.Hash
+        result := MD5Utils.Hash(str)
+        return result
+    }
+
+    CreateTranslationWindow() {
+        ; Create a resizable, draggable window with close button
+        this.translationWindow := Gui("+AlwaysOnTop +Resize +MinSize300x100", "Translation")
+        this.translationWindow.BackColor := "1E1E1E"
 
         ; Set larger, bold font for better visibility
-        this.translationWindow.SetFont("s12 bold cWhite", "Microsoft YaHei UI")
+        this.translationWindow.SetFont("s12 cWhite", "Microsoft YaHei UI")
 
-        ; Add text control with padding
-        this.translationWindow.Add("Text", "w400 h100 vTranslationText BackgroundTrans", "")
+        ; Add edit control for displaying translation (read-only, multi-line, word wrap)
+        editCtrl := this.translationWindow.Add("Edit",
+            "w500 h200 vTranslationText ReadOnly Multi Wrap Background1E1E1E cWhite", "")
 
-        ; Make window draggable by clicking anywhere
-        this.translationWindow.OnEvent("Click", (*) => this.StartDrag())
+        ; Press Escape to close the window
+        this.translationWindow.OnEvent("Escape", (*) => this.translationWindow.Hide())
+        this.translationWindow.OnEvent("Close", (*) => this.translationWindow.Hide())
+
+        ; Handle window resize to adjust edit control
+        this.translationWindow.OnEvent("Size", (*) => this.ResizeControls())
 
         ; Initially hide
         this.translationWindow.Show("Hide")
+
+        ; Make background semi-transparent (0-255, 0=invisible, 255=opaque)
+        WinSetTransparent(230, this.translationWindow.Hwnd)
     }
 
-    StartDrag() {
-        ; Enable dragging when clicking on the window
-        PostMessage(0xA1, 2, 0, , "ahk_id " . this.translationWindow.Hwnd)
+    ResizeControls() {
+        ; Get client area size
+        this.translationWindow.GetClientPos(, , &w, &h)
+        ; Resize edit control to fill window with 10px margin
+        try {
+            this.translationWindow["TranslationText"].Move(10, 10, w - 20, h - 20)
+        }
     }
+
     ShowTranslation(text) {
-        ; Update text
+        ; Update text first
         this.translationWindow["TranslationText"].Value := text
 
         ; Get mouse position
         MouseGetPos(&x, &y)
 
-        ; Show window near mouse
-        this.translationWindow.Show("x" . (x + 10) . " y" . (y + 10) . " AutoSize")
+        ; Calculate window position (offset from mouse)
+        winX := x + 15
+        winY := y + 15
 
-        ; Auto hide after 5 seconds
-        SetTimer(() => this.translationWindow.Hide(), -5000)
+        ; Show window with NoActivate to prevent focus stealing
+        this.translationWindow.Show("NA w520 h220")
+
+        ; Move window to mouse position using WinMove
+        WinMove(winX, winY, 520, 220, this.translationWindow.Hwnd)
     }
 
     Cleanup() {
@@ -174,6 +220,3 @@ class TranslatePlugin extends Plugin {
         }
     }
 }
-
-; Create global instance
-global g_TranslatePlugin := TranslatePlugin()

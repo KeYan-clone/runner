@@ -31,35 +31,30 @@ class PluginLoader {
                 continue
             }
 
-            ; Try to get the global plugin instance
+            ; Try to create plugin instance dynamically
             try {
-                ; Construct global variable name (e.g., g_WindowPinPlugin)
-                globalVarName := "g_" . pluginName
+                ; Create plugin instance by class name
+                plugin := %pluginName%()
 
-                ; Check if global instance exists
-                if (%globalVarName%) {
-                    plugin := %globalVarName%
+                ; Initialize plugin
+                plugin.Init(config)
 
-                    ; Initialize plugin
-                    plugin.Init(config)
-
-                    ; Register hotkeys
-                    hotkeys := plugin.GetHotkeys()
-                    if (Type(hotkeys) = "Map") {
-                        for hotkeyName, callback in hotkeys {
-                            if (config["keymap"].Has(hotkeyName)) {
-                                hotkeyManager.RegisterHotkey(hotkeyName, callback)
-                            }
+                ; Register hotkeys
+                hotkeys := plugin.GetHotkeys()
+                if (Type(hotkeys) = "Map") {
+                    for hotkeyName, callback in hotkeys {
+                        if (config["keymap"].Has(hotkeyName)) {
+                            hotkeyManager.RegisterHotkey(hotkeyName, callback)
                         }
                     }
-
-                    ; Store plugin
-                    this.loadedPlugins.Push(plugin)
-                    this.pluginInstances[pluginName] := plugin
-                    loadedCount++
                 }
-            } catch {
-                ; Plugin instance not found, skip
+
+                ; Store plugin
+                this.loadedPlugins.Push(plugin)
+                this.pluginInstances[pluginName] := plugin
+                loadedCount++
+            } catch as err {
+                ; Plugin class not found or instantiation failed, skip
             }
         }
 

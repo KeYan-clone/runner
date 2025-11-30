@@ -163,6 +163,3 @@ class WindowPinPlugin extends Plugin {
         return true
     }
 }
-
-; Create global instance
-global g_WindowPinPlugin := WindowPinPlugin()

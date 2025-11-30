@@ -4,8 +4,9 @@
     "search_engine": "https://cn.bing.com/search?q=",
     "window_transparency": 150,
     "translation": {
-        "api_url": "https://api.example.com/translate",
-        "api_key": "your_api_key_here"
+        "api_url": "https://fanyi-api.baidu.com/api/trans/vip/translate",
+        "appid": "20251201002509588",
+        "api_key": "jel2Pzyj516bVv751qvm"
     },
     "plugins": {
         "enabled": true,

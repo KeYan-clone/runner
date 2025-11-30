@@ -14,6 +14,10 @@
 #Include Core\PluginLoader.ahk
 #Include Core\Plugin.ahk
 
+; Include all plugins (required for PluginLoader to instantiate them)
+#Include Plugins\TranslatePlugin.ahk
+#Include Plugins\WindowPinPlugin.ahk
+
 ; Global Config
 global g_Config := Map()
 global g_SearchWindow := ""
