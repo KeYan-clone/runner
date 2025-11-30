@@ -23,6 +23,13 @@ class WindowPinPlugin extends Plugin {
         return true
     }
 
+    GetHotkeys() {
+        return Map(
+            "window_pin", (*) => this.Execute(),
+            "window_transparency", (*) => this.ToggleTransparency()
+        )
+    }
+
     Execute(params := "") {
         if (!this.enabled) {
             return

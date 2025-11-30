@@ -4,7 +4,11 @@
 #Requires AutoHotkey v2.0
 
 class PluginLoader {
-    static LoadAll(pluginDir, settings := "") {
+    static loadedPlugins := []
+    static pluginInstances := Map()  ; Store plugin instances by name
+
+    ; Auto-discover and load all plugins from directory
+    static AutoLoadPlugins(pluginDir, config, hotkeyManager) {
         fullPath := A_ScriptDir . "\" . pluginDir
 
         if (!DirExist(fullPath)) {
@@ -12,7 +16,7 @@ class PluginLoader {
         }
 
         ; Check plugin settings
-        pluginSettings := this.GetPluginSettings(settings)
+        pluginSettings := this.GetPluginSettings(config["settings"])
 
         if (!pluginSettings["enabled"]) {
             return 0
@@ -27,13 +31,35 @@ class PluginLoader {
                 continue
             }
 
+            ; Try to get the global plugin instance
             try {
-                ; Load plugin as standalone script
-                Run(A_LoopFileFullPath)
-                loadedCount++
-            } catch as err {
-                ; Silently fail or log error
-                ; MsgBox("Failed to load plugin: " . A_LoopFileName . "`n" . err.Message)
+                ; Construct global variable name (e.g., g_WindowPinPlugin)
+                globalVarName := "g_" . pluginName
+
+                ; Check if global instance exists
+                if (%globalVarName%) {
+                    plugin := %globalVarName%
+
+                    ; Initialize plugin
+                    plugin.Init(config)
+
+                    ; Register hotkeys
+                    hotkeys := plugin.GetHotkeys()
+                    if (Type(hotkeys) = "Map") {
+                        for hotkeyName, callback in hotkeys {
+                            if (config["keymap"].Has(hotkeyName)) {
+                                hotkeyManager.RegisterHotkey(hotkeyName, callback)
+                            }
+                        }
+                    }
+
+                    ; Store plugin
+                    this.loadedPlugins.Push(plugin)
+                    this.pluginInstances[pluginName] := plugin
+                    loadedCount++
+                }
+            } catch {
+                ; Plugin instance not found, skip
             }
         }
 
@@ -98,5 +124,35 @@ class PluginLoader {
         }
 
         return false
+    }
+
+    ; Register all loaded plugins and their hotkeys
+    static RegisterPlugins(plugins, config, hotkeyManager) {
+        for plugin in plugins {
+            ; Initialize plugin
+            try {
+                plugin.Init(config)
+            } catch as err {
+                continue
+            }
+
+            ; Get and register hotkeys
+            hotkeys := plugin.GetHotkeys()
+            if (Type(hotkeys) = "Map") {
+                for hotkeyName, callback in hotkeys {
+                    if (config["keymap"].Has(hotkeyName)) {
+                        hotkeyManager.RegisterHotkey(hotkeyName, callback)
+                    }
+                }
+            }
+
+            ; Store loaded plugin
+            this.loadedPlugins.Push(plugin)
+        }
+    }
+
+    ; Get all loaded plugins
+    static GetLoadedPlugins() {
+        return this.loadedPlugins
     }
 }

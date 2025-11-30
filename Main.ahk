@@ -14,9 +14,6 @@
 #Include Core\PluginLoader.ahk
 #Include Core\Plugin.ahk
 
-; Include Plugins
-#Include Plugins\WindowPinPlugin.ahk
-
 ; Global Config
 global g_Config := Map()
 global g_SearchWindow := ""
@@ -48,17 +45,8 @@ Init() {
     g_HotkeyManager.RegisterHotkey("reload", (*) => ReloadScript())
     g_HotkeyManager.RegisterHotkey("exit", (*) => ExitWithNotification())
 
-    ; Register plugin hotkeys
-    g_WindowPinPlugin.Init(g_Config)
-    if (g_Config["keymap"].Has("window_pin")) {
-        g_HotkeyManager.RegisterHotkey("window_pin", (*) => g_WindowPinPlugin.Execute())
-    }
-    if (g_Config["keymap"].Has("window_transparency")) {
-        g_HotkeyManager.RegisterHotkey("window_transparency", (*) => g_WindowPinPlugin.ToggleTransparency())
-    }
-
-    ; Load Plugins from directory based on settings
-    PluginLoader.LoadAll("Plugins", g_Config["settings"])
+    ; Auto-discover and load all plugins
+    PluginLoader.AutoLoadPlugins("Plugins", g_Config, g_HotkeyManager)
 
     ; Tray tip
     try {

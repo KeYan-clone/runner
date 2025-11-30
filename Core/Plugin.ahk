@@ -78,4 +78,11 @@ class Plugin {
         }
         return Map()
     }
+
+    ; Get plugin hotkeys
+    ; Override this to define plugin hotkeys
+    ; Return Map with key: hotkey name, value: callback function
+    GetHotkeys() {
+        return Map()
+    }
 }

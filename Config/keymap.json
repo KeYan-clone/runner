@@ -3,5 +3,9 @@
   "reload": "^!r",
   "exit": "CapsLock & q",
   "window_pin": "CapsLock & p",
-  "window_transparency": "CapsLock & t"
+  "window_transparency": "CapsLock & t",
+  "translate": "CapsLock & d",
+  "launcher_execute": "CapsLock & Enter",
+  "launcher_next": "Down",
+  "launcher_previous": "Up"
 }

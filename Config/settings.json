@@ -1,13 +1,18 @@
 ﻿{
     "width": 600,
     "icon": "runner.ico",
-    "search_engine": "https://www.google.com/search?q=",
+    "search_engine": "https://cn.bing.com/search?q=",
     "window_transparency": 150,
+    "translation": {
+        "api_url": "https://api.example.com/translate",
+        "api_key": "your_api_key_here"
+    },
     "plugins": {
         "enabled": true,
         "load_all": true,
         "whitelist": [
-            "WindowPinPlugin"
+            "WindowPinPlugin",
+            "TranslatePlugin"
         ]
     }
 }

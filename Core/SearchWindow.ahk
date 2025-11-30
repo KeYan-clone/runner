@@ -1,6 +1,8 @@
 ; SearchWindow - Main UI and search matching logic
 ; Handles the search window display and real-time matching
 
+#Include ..\Utils\StringUtils.ahk
+
 class SearchWindow {
     gui := ""
     searchBox := ""
@@ -37,12 +39,20 @@ class SearchWindow {
         this.gui.OnEvent("Escape", (*) => this.Hide())
         this.gui.OnEvent("Close", (*) => this.Hide())
 
-        ; Add keyboard shortcuts
-        HotIfWinActive("ahk_id " . this.gui.Hwnd)
-        Hotkey("Enter", (*) => this.LaunchSelected())
-        Hotkey("Down", (*) => this.SelectNext())
-        Hotkey("Up", (*) => this.SelectPrevious())
-        HotIf()
+        ; Add keyboard shortcuts from keymap
+        if (Type(this.config["keymap"]) = "Map") {
+            HotIfWinActive("ahk_id " . this.gui.Hwnd)
+            if (this.config["keymap"].Has("launcher_execute")) {
+                Hotkey(this.config["keymap"]["launcher_execute"], (*) => this.LaunchSelected())
+            }
+            if (this.config["keymap"].Has("launcher_next")) {
+                Hotkey(this.config["keymap"]["launcher_next"], (*) => this.SelectNext())
+            }
+            if (this.config["keymap"].Has("launcher_previous")) {
+                Hotkey(this.config["keymap"]["launcher_previous"], (*) => this.SelectPrevious())
+            }
+            HotIf()
+        }
 
         ; Resize window
         this.gui.Show("w" . width . " h260 Hide")
@@ -98,6 +108,10 @@ class SearchWindow {
                 }
             }
         }
+
+        ; Always add URL option
+        this.resultList.Add(["🌐 Open as URL: " . searchText])
+        this.currentMatches.Push(Map("type", "url", "query", searchText))
 
         ; Always add web search option
         this.resultList.Add(["🔍 Search Web for '" . searchText . "'"])
@@ -173,69 +187,47 @@ class SearchWindow {
         ; Hide window first
         this.Hide()
 
-        ; Launch the app or perform web search
-        if (Type(selected) = "Map" && selected.Has("type") && selected["type"] = "web_search") {
-            query := selected["query"]
-
-            ; Check if it looks like a URL or IP address
-            if (RegExMatch(query, "i)^(https?://|www\.|localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})")) {
-                ; Direct URL/IP - open as-is
+        ; Handle different action types
+        if (Type(selected) = "Map" && selected.Has("type")) {
+            if (selected["type"] = "url") {
+                ; Direct URL access
+                query := selected["query"]
                 url := query
                 ; Add http:// if no protocol specified
                 if (!RegExMatch(url, "i)^https?://")) {
                     url := "http://" . url
                 }
-            } else {
-                ; Use search engine from settings
+                try {
+                    Run(url)
+                } catch as err {
+                    MsgBox("Failed to open URL: " . err.Message)
+                }
+                return
+            } else if (selected["type"] = "web_search") {
+                ; Web search
+                query := selected["query"]
                 searchEngine := "https://www.google.com/search?q="  ; Default
                 if (Type(this.config["settings"]) = "Map" && this.config["settings"].Has("search_engine")) {
                     searchEngine := this.config["settings"]["search_engine"]
                 }
-                url := searchEngine . this.UrlEncode(query)
-            }
-
-            try {
-                Run(url)
-            } catch as err {
-                MsgBox("Failed to open browser: " . err.Message)
-            }
-        } else {
-            ; Launch local app
-            if (selected.Has("path")) {
+                url := searchEngine . StringUtils.UrlEncode(query)
                 try {
-                    Run(selected["path"])
+                    Run(url)
                 } catch as err {
-                    MsgBox("Failed to launch '" . selected["name"] . "': " . err.Message)
+                    MsgBox("Failed to open browser: " . err.Message)
                 }
+                return
             }
         }
-    }
 
-    UrlEncode(str) {
-        ; Convert string to UTF-8 bytes and encode
-        encoded := ""
-
-        ; Use VarSetStrCapacity and StrPut for proper UTF-8 conversion
-        bufferSize := StrPut(str, "UTF-8")
-        buf := Buffer(bufferSize)
-        StrPut(str, buf, "UTF-8")
-
-        ; Process each byte
-        loop bufferSize - 1 {  ; -1 to skip null terminator
-            byte := NumGet(buf, A_Index - 1, "UChar")
-            char := Chr(byte)
-
-            ; Keep unreserved characters as-is
-            if (char ~= "[A-Za-z0-9\-_.~]") {
-                encoded .= char
-            } else if (char = " ") {
-                encoded .= "+"
-            } else {
-                ; Encode as %XX
-                encoded .= Format("%{:02X}", byte)
+        ; Launch local app
+        if (selected.Has("path")) {
+            try {
+                Run(selected["path"])
+            } catch as err {
+                MsgBox("Failed to launch '" . selected["name"] . "': " . err.Message)
             }
         }
-        return encoded
     }
 
     SelectNext() {
