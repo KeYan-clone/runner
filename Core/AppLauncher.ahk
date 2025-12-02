@@ -26,16 +26,22 @@ class AppLauncher {
                 path := app["path"]
                 args := app.Has("args") ? app["args"] : ""
                 workdir := app.Has("workdir") ? app["workdir"] : ""
+                appName := app.Has("name") ? app["name"] : ""
 
+                pid := 0
                 if (workdir != "" && args != "") {
-                    Run(path . " " . args, workdir)
+                    pid := Run(path . " " . args, workdir)
                 } else if (workdir != "") {
-                    Run(path, workdir)
+                    pid := Run(path, workdir)
                 } else if (args != "") {
-                    Run(path . " " . args)
+                    pid := Run(path . " " . args)
                 } else {
-                    Run(path)
+                    pid := Run(path)
                 }
+
+                ; Do not automatically activate windows after launch
+                ; Some apps spawn child processes or reuse existing instances,
+                ; so activating by PID/title can target the wrong window.
                 return true
             } catch as err {
                 appName := app.Has("name") ? app["name"] : "application"
