@@ -3,6 +3,7 @@
 
 #Requires AutoHotkey v2.0
 #Include ..\Utils\StringUtils.ahk
+#Include HistoryManager.ahk
 
 class AppLauncher {
     static Launch(app, config := "") {
@@ -12,7 +13,11 @@ class AppLauncher {
 
         ; Check if it's a URL direct access
         if (Type(app) = "Map" && app.Has("type") && app["type"] = "url") {
-            return this.OpenDirectURL(app["query"])
+            result := this.OpenDirectURL(app["query"])
+            if (result) {
+                HistoryManager.AddURL(app["query"])
+            }
+            return result
         }
 
         ; Check if it's a web search

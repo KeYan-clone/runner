@@ -2,6 +2,8 @@
 ; Handles the search window display and real-time matching
 
 #Include ..\Utils\StringUtils.ahk
+#Include HistoryManager.ahk
+#Include AppLauncher.ahk
 
 class SearchWindow {
     gui := ""
@@ -109,6 +111,19 @@ class SearchWindow {
             }
         }
 
+        ; Search in history
+        historyResults := HistoryManager.Search(searchText)
+        for entry in historyResults {
+            if (Type(entry) = "Map" && entry.Has("url")) {
+                displayText := "📜 " . entry["url"]
+                if (entry.Has("date")) {
+                    displayText .= " (" . entry["date"] . ")"
+                }
+                this.resultList.Add([displayText])
+                this.currentMatches.Push(Map("type", "url", "query", entry["url"]))
+            }
+        }
+
         ; Always add URL option
         this.resultList.Add(["🌐 Open as URL: " . searchText])
         this.currentMatches.Push(Map("type", "url", "query", searchText))
@@ -187,47 +202,8 @@ class SearchWindow {
         ; Hide window first
         this.Hide()
 
-        ; Handle different action types
-        if (Type(selected) = "Map" && selected.Has("type")) {
-            if (selected["type"] = "url") {
-                ; Direct URL access
-                query := selected["query"]
-                url := query
-                ; Add http:// if no protocol specified
-                if (!RegExMatch(url, "i)^https?://")) {
-                    url := "http://" . url
-                }
-                try {
-                    Run(url)
-                } catch as err {
-                    MsgBox("Failed to open URL: " . err.Message)
-                }
-                return
-            } else if (selected["type"] = "web_search") {
-                ; Web search
-                query := selected["query"]
-                searchEngine := "https://www.google.com/search?q="  ; Default
-                if (Type(this.config["settings"]) = "Map" && this.config["settings"].Has("search_engine")) {
-                    searchEngine := this.config["settings"]["search_engine"]
-                }
-                url := searchEngine . StringUtils.UrlEncode(query)
-                try {
-                    Run(url)
-                } catch as err {
-                    MsgBox("Failed to open browser: " . err.Message)
-                }
-                return
-            }
-        }
-
-        ; Launch local app
-        if (selected.Has("path")) {
-            try {
-                Run(selected["path"])
-            } catch as err {
-                MsgBox("Failed to launch '" . selected["name"] . "': " . err.Message)
-            }
-        }
+        ; Use AppLauncher to handle all launches (this will save history for URLs)
+        AppLauncher.Launch(selected, this.config)
     }
 
     SelectNext() {
