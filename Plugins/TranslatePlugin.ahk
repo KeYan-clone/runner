@@ -28,8 +28,18 @@ class TranslatePlugin extends Plugin {
 
     GetHotkeys() {
         return Map(
-            "translate", (*) => this.Execute()
+            "translate", (*) => this.SafeExecute()
         )
+    }
+
+    SafeExecute() {
+        try {
+            this.Execute()
+        } catch as err {
+            msg := "Translation error: " . err.Message
+            this.ShowTranslation(msg)
+            TrayTip("Translation", msg, 2)
+        }
     }
 
     Execute(params := "") {

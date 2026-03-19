@@ -17,6 +17,7 @@
 ; Include all plugins (required for PluginLoader to instantiate them)
 #Include Plugins\TranslatePlugin.ahk
 #Include Plugins\WindowPinPlugin.ahk
+#Include Plugins\AutoClickerPlugin.ahk
 
 ; Global Config
 global g_Config := Map()

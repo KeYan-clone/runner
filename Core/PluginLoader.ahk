@@ -44,7 +44,8 @@ class PluginLoader {
                 if (Type(hotkeys) = "Map") {
                     for hotkeyName, callback in hotkeys {
                         if (config["keymap"].Has(hotkeyName)) {
-                            hotkeyManager.RegisterHotkey(hotkeyName, callback)
+                            hotkeyManager.RegisterHotkey(hotkeyName, this.WrapHotkeyCallback(pluginName, hotkeyName,
+                                callback))
                         }
                     }
                 }
@@ -136,7 +137,8 @@ class PluginLoader {
             if (Type(hotkeys) = "Map") {
                 for hotkeyName, callback in hotkeys {
                     if (config["keymap"].Has(hotkeyName)) {
-                        hotkeyManager.RegisterHotkey(hotkeyName, callback)
+                        hotkeyManager.RegisterHotkey(hotkeyName, this.WrapHotkeyCallback(Type(plugin), hotkeyName,
+                        callback))
                     }
                 }
             }
@@ -149,5 +151,20 @@ class PluginLoader {
     ; Get all loaded plugins
     static GetLoadedPlugins() {
         return this.loadedPlugins
+    }
+
+    static WrapHotkeyCallback(pluginName, hotkeyName, callback) {
+        return (args*) => (
+            this.InvokeHotkeySafely(pluginName, hotkeyName, callback, args*)
+        )
+    }
+
+    static InvokeHotkeySafely(pluginName, hotkeyName, callback, args*) {
+        try {
+            callback.Call(args*)
+        } catch as err {
+            MsgBox("Plugin error in " . pluginName . " [" . hotkeyName . "]:`n" . err.Message, "Plugin Error")
+            TrayTip("Plugin Error", pluginName . " failed: " . err.Message, 2)
+        }
     }
 }

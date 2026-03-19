@@ -5,6 +5,7 @@
   "window_pin": "CapsLock & p",
   "window_transparency": "CapsLock & t",
   "translate": "CapsLock & d",
+  "auto_clicker": "CapsLock & y",
   "launcher_execute": "CapsLock & Enter",
   "launcher_next": "Down",
   "launcher_previous": "Up"
