@@ -132,3 +132,6 @@ class MyPlugin extends Plugin {
 
 ## 特别感谢
 本项目的JSON解析库使用的是 `TheArkive` 所开发 [JXON_ahk2](https://github.com/TheArkive/JXON_ahk2)
+
+
+

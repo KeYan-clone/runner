@@ -2,6 +2,7 @@
   "toggle_launcher": "CapsLock & o",
   "reload": "^!r",
   "exit": "CapsLock & q",
+  "open_settings": "CapsLock & s",
   "window_pin": "CapsLock & p",
   "window_transparency": "CapsLock & t",
   "translate": "CapsLock & d",
